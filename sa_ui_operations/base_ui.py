@@ -1,15 +1,12 @@
 import sys
 import uuid
-from dataclasses import dataclass
-
 from PySide6.QtCore import Qt, QSettings, QTimer, Signal, QObject
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget,
-    QVBoxLayout, QHBoxLayout, QTabWidget,
+    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QTabBar,
     QToolButton, QPushButton, QComboBox, QLineEdit,
     QLabel, QStackedWidget, QPlainTextEdit, QFrame,
-    QSizePolicy, QSpinBox, QCheckBox
+    QSizePolicy, QMainWindow, QApplication
 )
 
 
@@ -30,64 +27,6 @@ class DebouncedWriter(QObject):
 
     def schedule(self):
         self._timer.start()
-
-
-# ----------------------------
-# "Operations" registry
-# ----------------------------
-@dataclass(frozen=True)
-class OperationSpec:
-    key: str
-    title: str
-    widget_factory: callable  # (tab_context) -> QWidget
-
-
-class OpHelloWidget(QWidget):
-    """
-    Example operation UI.
-    """
-    def __init__(self, tab_ctx, parent=None):
-        super().__init__(parent)
-        self.tab_ctx = tab_ctx
-
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Hello operation UI"))
-        self.chk = QCheckBox("Verbose output")
-        self.spin = QSpinBox()
-        self.spin.setRange(0, 100)
-        self.spin.setValue(10)
-
-        row = QHBoxLayout()
-        row.addWidget(self.chk)
-        row.addWidget(QLabel("Count:"))
-        row.addWidget(self.spin)
-        row.addStretch(1)
-
-        layout.addLayout(row)
-        layout.addStretch(1)
-
-        # Restore operation-specific settings
-        s = self.tab_ctx.settings
-        self.chk.setChecked(s.value(self.tab_ctx.key("hello/verbose"), False, type=bool))
-        self.spin.setValue(s.value(self.tab_ctx.key("hello/count"), 10, type=int))
-
-        # Auto-save on change
-        self.chk.toggled.connect(lambda v: self.tab_ctx.save_value("hello/verbose", v))
-        self.spin.valueChanged.connect(lambda v: self.tab_ctx.save_value("hello/count", v))
-
-
-class OpPlaceholderWidget(QWidget):
-    def __init__(self, tab_ctx, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Another operation UI placeholder"))
-        layout.addStretch(1)
-
-
-OPERATIONS = [
-    OperationSpec("hello", "Hello / demo", lambda ctx: OpHelloWidget(ctx)),
-    OperationSpec("other", "Other / placeholder", lambda ctx: OpPlaceholderWidget(ctx)),
-]
 
 
 # ----------------------------
@@ -159,31 +98,35 @@ class CollapsibleConsole(QWidget):
 
 
 # ----------------------------
-# Single tab widget
+# Single tab widget - базовый универсальный интерфейс
 # ----------------------------
 class ScriptTab(QWidget):
+    """
+    Базовый универсальный интерфейс вкладки.
+    Содержит только верхнюю панель управления (выбор скрипта, имя, запуск)
+    и консоль. Содержимое вкладки загружается через систему плагинов.
+    """
     request_rename = Signal(str)  # emitted when user changes tab name
 
-    def __init__(self, settings: QSettings, tab_id: str, parent=None):
+    def __init__(self, settings: QSettings, tab_id: str, plugin_registry, parent=None):
         super().__init__(parent)
 
         # Debounced flush is useful for frequent setting writes.
         self._save_scheduler = DebouncedWriter(self._flush_settings, delay_ms=250, parent=self)
         self.ctx = TabContext(settings, tab_id, self._save_scheduler, parent=self)
-
-        self._pending_flush = False
+        self.plugin_registry = plugin_registry
 
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(10)
 
-        # --- Top bar
+        # --- Top bar (первая строчка: выбор скрипта, имя, запуск)
         top = QHBoxLayout()
         top.setSpacing(8)
 
         self.op_combo = QComboBox()
-        for op in OPERATIONS:
-            self.op_combo.addItem(op.title, op.key)
+        for plugin in plugin_registry.get_all_plugins():
+            self.op_combo.addItem(plugin.get_title(), plugin.get_key())
 
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("Tab name")
@@ -197,14 +140,14 @@ class ScriptTab(QWidget):
         top.addWidget(self.name_edit, 2)
         top.addWidget(self.run_btn, 0)
 
-        # --- Main content area = stacked widgets
+        # --- Main content area = stacked widgets для плагинов
         self.stack = QStackedWidget()
         self._op_key_to_index = {}
 
-        for idx, op in enumerate(OPERATIONS):
-            w = op.widget_factory(self.ctx)
+        for idx, plugin in enumerate(plugin_registry.get_all_plugins()):
+            w = plugin.create_widget(self.ctx)
             self.stack.addWidget(w)
-            self._op_key_to_index[op.key] = idx
+            self._op_key_to_index[plugin.get_key()] = idx
 
         # --- Console at bottom (collapsible)
         self.console = CollapsibleConsole()
@@ -227,11 +170,13 @@ class ScriptTab(QWidget):
         self.name_edit.setText(name)
 
         # Operation selection
-        op_key = self.ctx.settings.value(self.ctx.key("meta/operation"), OPERATIONS[0].key, type=str)
+        plugins = self.plugin_registry.get_all_plugins()
+        default_key = plugins[0].get_key() if plugins else ""
+        op_key = self.ctx.settings.value(self.ctx.key("meta/operation"), default_key, type=str)
         combo_index = self.op_combo.findData(op_key)
         if combo_index < 0:
             combo_index = 0
-            op_key = OPERATIONS[0].key
+            op_key = default_key
         self.op_combo.setCurrentIndex(combo_index)
 
         # Apply to stack
@@ -255,14 +200,15 @@ class ScriptTab(QWidget):
         self.request_rename.emit(text)
 
     def _on_run(self):
-        # Here you will route execution to selected operation implementation.
+        # Получаем текущий плагин и запускаем его
         op_key = self.op_combo.currentData()
         tab_name = self.name_edit.text().strip() or "Unnamed"
-        self.console.append_text(f"[RUN] tab='{tab_name}' op='{op_key}'")
-
-        # Stub "work"
-        self.console.append_text("...do work here (spawn process/thread, etc.)")
-        self.console.append_text("[DONE]")
+        
+        plugin = self.plugin_registry.get_plugin(op_key)
+        if plugin:
+            plugin.execute(self.ctx, self.console.append_text)
+        else:
+            self.console.append_text(f"[ERROR] Plugin '{op_key}' not found")
 
     def _flush_settings(self):
         # QSettings writes are generally buffered; sync ensures physical flush.
@@ -274,10 +220,13 @@ class ScriptTab(QWidget):
 # Main window with tabs + add tab button
 # ----------------------------
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, plugin_registry):
         super().__init__()
 
         self.settings = QSettings("RequiemTools", "UniversalScriptsUI")
+        self._plus_tab = None
+        self._handling_plus_click = False
+        self.plugin_registry = plugin_registry
 
         self.setWindowTitle("Universal Scripts UI")
         self.resize(1100, 700)
@@ -289,23 +238,12 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(8)
 
-        header = QHBoxLayout()
-        header.setContentsMargins(0, 0, 0, 0)
-        header.setSpacing(6)
-
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._close_tab)
+        self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
-        self.add_btn = QToolButton()
-        self.add_btn.setText("+")
-        self.add_btn.setToolTip("Create new tab")
-        self.add_btn.clicked.connect(self._create_tab)
-
-        header.addWidget(self.tabs, 1)
-        header.addWidget(self.add_btn, 0)
-
-        root.addLayout(header)
+        root.addWidget(self.tabs, 1)
 
         # Menu actions (optional)
         act_new = QAction("New Tab", self)
@@ -315,6 +253,7 @@ class MainWindow(QMainWindow):
 
         # Restore or create default tabs
         self._restore_tabs()
+        self._ensure_plus_tab()
 
         # Restore window geometry
         geom = self.settings.value("window/geometry")
@@ -343,26 +282,72 @@ class MainWindow(QMainWindow):
         if 0 <= idx < self.tabs.count():
             self.tabs.setCurrentIndex(idx)
 
-        self.tabs.currentChanged.connect(self._on_active_tab_changed)
-
     def _on_active_tab_changed(self, idx: int):
         self.settings.setValue("tabs/_active_index", idx)
+
+    def _plus_index(self) -> int:
+        if self._plus_tab is None:
+            return -1
+        return self.tabs.indexOf(self._plus_tab)
+
+    def _is_plus_index(self, idx: int) -> bool:
+        return idx >= 0 and idx == self._plus_index()
+
+    def _ensure_plus_tab(self):
+        if self._plus_tab is None:
+            self._plus_tab = QWidget()
+            self._plus_tab.setObjectName("PlusTab")
+            # Keep it minimal; it's never meant to be "real" content.
+            QVBoxLayout(self._plus_tab).addStretch(1)
+
+        idx = self._plus_index()
+        if idx < 0:
+            idx = self.tabs.addTab(self._plus_tab, "+")
+        # Hide close button for the [+] tab (QTabWidget puts it on the tabBar)
+        bar = self.tabs.tabBar()
+        bar.setTabButton(idx, QTabBar.LeftSide, None)
+        bar.setTabButton(idx, QTabBar.RightSide, None)
+
+    def _on_current_tab_changed(self, idx: int):
+        # If user clicked the [+] tab -> create a new real tab and switch to it.
+        if self._handling_plus_click:
+            return
+        if self._is_plus_index(idx):
+            self._handling_plus_click = True
+            try:
+                new_idx = self._create_tab(focus=False)
+                if new_idx is not None:
+                    self.tabs.setCurrentIndex(new_idx)
+            finally:
+                self._handling_plus_click = False
+            return
+
+        # Persist active index among real tabs (exclude [+] if it exists)
+        plus = self._plus_index()
+        if plus >= 0 and idx > plus:
+            # shouldn't happen, but be safe
+            idx = plus - 1
+        self._on_active_tab_changed(idx)
 
     def _create_tab(self, tab_id: str | None = None, focus=True):
         if tab_id is None:
             tab_id = uuid.uuid4().hex
 
-        tab = ScriptTab(self.settings, tab_id)
+        tab = ScriptTab(self.settings, tab_id, self.plugin_registry)
         tab.request_rename.connect(lambda name, t=tab: self._rename_tab_widget(t, name))
 
         # initial title from settings
         title = self.settings.value(f"tabs/{tab_id}/meta/name", "New tab", type=str)
-        i = self.tabs.addTab(tab, title)
+        plus = self._plus_index()
+        insert_at = plus if plus >= 0 else self.tabs.count()
+        i = self.tabs.insertTab(insert_at, tab, title)
+        self._ensure_plus_tab()
 
         if focus:
             self.tabs.setCurrentIndex(i)
 
         self._persist_tabs_list()
+        return i
 
     def _rename_tab_widget(self, tab_widget: QWidget, name: str):
         idx = self.tabs.indexOf(tab_widget)
@@ -370,8 +355,9 @@ class MainWindow(QMainWindow):
             self.tabs.setTabText(idx, name.strip() or "Unnamed")
 
     def _close_tab(self, index: int):
+        if self._is_plus_index(index):
+            return
         w = self.tabs.widget(index)
-        tab_id = w.ctx.tab_id if hasattr(w, "ctx") else None
 
         self.tabs.removeTab(index)
         w.deleteLater()
@@ -381,6 +367,7 @@ class MainWindow(QMainWindow):
         # If you want cleanup: iterate keys under f"tabs/{tab_id}/" and remove.
 
         self._persist_tabs_list()
+        self._ensure_plus_tab()
 
         if self.tabs.count() == 0:
             self._create_tab()
@@ -390,23 +377,16 @@ class MainWindow(QMainWindow):
         ids = []
         for i in range(self.tabs.count()):
             w = self.tabs.widget(i)
+            if w is self._plus_tab:
+                continue
             if hasattr(w, "ctx"):
                 ids.append(w.ctx.tab_id)
         self.settings.setValue("tabs/_order", ids)
 
         # Keep active index
-        self.settings.setValue("tabs/_active_index", self.tabs.currentIndex())
+        idx = self.tabs.currentIndex()
+        if self._is_plus_index(idx):
+            # store last real tab
+            idx = max(0, idx - 1)
+        self.settings.setValue("tabs/_active_index", idx)
 
-
-def main():
-    app = QApplication(sys.argv)
-    # Optional: make Qt prefer Wayland when available. Usually not required.
-    # On some setups you may set env var before app creation:
-    # os.environ["QT_QPA_PLATFORM"] = "wayland"
-    w = MainWindow()
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()

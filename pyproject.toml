@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sa-ui-operations-base"
+version = "0.1.0"
+description = "Универсальная библиотека для создания GUI приложений на PySide6 с системой плагинов"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["gui", "pyside6", "qt", "plugins", "ui", "framework"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
+
+[project.scripts]
+sa-ui-operations = "sa_ui_operations.main:main"
+
+[tool.setuptools]
+packages = ["sa_ui_operations", "sa_ui_operations.plugins"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt"]
+
