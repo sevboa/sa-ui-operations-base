@@ -27,7 +27,9 @@ def main():
     # Создаем и запускаем приложение
     app = QApplication(sys.argv)
     
-    window = MainWindow(registry)
+    # Создаем главное окно с уникальными именами для изоляции настроек
+    # ВАЖНО: Используйте уникальные имена для вашего приложения!
+    window = MainWindow(registry, "MyCompany", "MyApplication")
     window.show()
     
     sys.exit(app.exec())

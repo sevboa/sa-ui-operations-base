@@ -6,26 +6,85 @@
 
 - 🎨 **Базовый универсальный интерфейс** - готовый UI с вкладками, консолью и управлением
 - 🔌 **Система плагинов** - легко добавлять новые скрипты как плагины
+- ⚙️ **Автоматические настройки** - форма настроек создается автоматически, не нужно писать код виджетов
 - 💾 **Автосохранение настроек** - автоматическое сохранение состояния вкладок и настроек плагинов
 - 📝 **Консоль вывода** - встроенная сворачиваемая консоль для вывода результатов работы скриптов
 - 🔄 **Переиспользование** - базовый интерфейс можно использовать в разных проектах
+- 🌐 **Общие настройки** - поддержка общих настроек для всех плагинов с визуальным разделением
+
+## Документация
+
+- **[PLUGIN_GUIDE.md](PLUGIN_GUIDE.md)** - 📖 Полное руководство по созданию плагинов с примерами
+- **[QUICKSTART.md](QUICKSTART.md)** - Быстрый старт
+- **[DEV_DEBUG.md](DEV_DEBUG.md)** - Отладка и разработка
 
 ## Установка
 
-### Установка из исходников
+### ⚠️ Важно: Используйте виртуальное окружение!
+
+```bash
+# Создайте виртуальное окружение
+python -m venv .venv
+
+# Активируйте его
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate  # Windows
+```
+
+### Рекомендуемый способ: установка из Git по тегу версии
+
+```bash
+# Установка стабильной версии 1.1.0
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v1.1.0
+```
+
+**Почему теги?** Теги обеспечивают стабильность и воспроизводимость - все получат одинаковый код.
+
+**Быстрая установка:** См. [QUICK_INSTALL.md](QUICK_INSTALL.md)
+
+### Установка из исходников (для разработки)
 
 ```bash
 # Клонируйте репозиторий
 git clone https://github.com/sevboa/sa-ui-operations-base.git
 cd sa-ui-operations-base
 
-# Установите библиотеку
+# Установите библиотеку в режиме разработки
 pip install -e .
 ```
 
-### Установка как пакет
+### Запуск без установки (для отладки)
 
-После публикации в PyPI (или из локальной папки):
+Для разработки и отладки с брейкпоинтами используйте скрипт `dev_run.py`:
+
+```bash
+python dev_run.py
+```
+
+Этот скрипт запускает приложение напрямую из исходников без установки пакета, что позволяет:
+- Использовать брейкпоинты в IDE
+- Видеть изменения кода сразу после сохранения
+- Отлаживать код без переустановки
+
+**Подробнее:** См. [DEV_DEBUG.md](DEV_DEBUG.md) для инструкций по отладке в различных IDE.
+
+### Установка из ветки develop (только для тестирования)
+
+```bash
+# ⚠️ Внимание: код может быть нестабильным!
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+```
+
+**Когда использовать develop:**
+- Тестируете новые функции до релиза
+- Разрабатываете плагины и нужны последние изменения
+- Локальная разработка
+
+**Рекомендация:** Для production используйте теги версий, а не ветку develop.
+
+### Установка как пакет из PyPI
+
+После публикации в PyPI:
 
 ```bash
 pip install sa-ui-operations-base
@@ -36,6 +95,18 @@ pip install sa-ui-operations-base
 Библиотека требует:
 - Python >= 3.8
 - PySide6 >= 6.6
+
+### Использование в requirements.txt
+
+```txt
+# Рекомендуется: стабильная версия по тегу
+sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v1.1.0
+
+# Или для разработки (не рекомендуется для production)
+# sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+```
+
+Подробнее об установке из Git см. [INSTALL_FROM_GIT.md](INSTALL_FROM_GIT.md)
 
 ## Быстрый старт
 
@@ -60,7 +131,10 @@ def main():
     
     # Создаем и запускаем приложение
     app = QApplication(sys.argv)
-    window = MainWindow(registry)
+    
+    # ВАЖНО: Укажите уникальные имена организации и приложения для изоляции настроек
+    # Каждое приложение будет иметь свой собственный кэш вкладок и настроек
+    window = MainWindow(registry, "MyCompany", "MyApplication")
     window.show()
     sys.exit(app.exec())
 
@@ -70,14 +144,18 @@ if __name__ == "__main__":
 
 ### 2. Создание собственного плагина
 
+**📖 Полное руководство:** См. [PLUGIN_GUIDE.md](PLUGIN_GUIDE.md) - подробное руководство по созданию плагинов с примерами.
+
 Создайте файл `my_plugin.py` в вашем проекте:
 
 ```python
 from sa_ui_operations import PluginInterface
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout
+from sa_ui_operations.settings import StringSetting, IntegerSetting
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtCore import QThread
 
 class MyPlugin(PluginInterface):
-    """Пример собственного плагина"""
+    """Пример собственного плагина с автоматическими настройками"""
     
     def get_key(self):
         return "my_plugin"  # Уникальный идентификатор
@@ -86,29 +164,61 @@ class MyPlugin(PluginInterface):
         return "Мой плагин"  # Название в выпадающем списке
     
     def create_widget(self, tab_context):
-        """Создает виджет настроек плагина"""
-        return MyPluginWidget(tab_context)
+        """Создает основное окно плагина (может быть простым)"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Мой плагин"))
+        layout.addWidget(QLabel("Настройки доступны через кнопку ⚙"))
+        layout.addStretch(1)
+        return widget
     
-    def execute(self, tab_context, console_output_fn):
+    def get_settings(self):
+        """
+        Определяет настройки плагина.
+        Форма создается автоматически - не нужно писать код для виджетов!
+        """
+        return [
+            StringSetting(
+                key="text",
+                label="Текст",
+                default_value="",
+                description="Введите текст для обработки"
+            ),
+            IntegerSetting(
+                key="count",
+                label="Количество",
+                default_value=5,
+                description="Количество повторений"
+            ),
+        ]
+    
+    def execute(self, tab_context, console_output_fn, stop_flag=None):
         """Выполняет скрипт плагина"""
-        # Получаем настройки из контекста
-        text = tab_context.settings.value(
-            tab_context.key("my_plugin/text"), 
-            "", 
-            type=str
-        )
+        # Получаем настройки через систему настроек
+        settings = self.get_settings()
+        settings_dict = {s.key: s for s in settings}
+        
+        text = settings_dict["text"].get_value(tab_context)
+        count = settings_dict["count"].get_value(tab_context)
         
         # Выполняем работу
         console_output_fn(f"[RUN] Мой плагин запущен")
-        console_output_fn(f"Введенный текст: {text}")
-        # ... ваша логика ...
+        console_output_fn(f"Текст: {text}")
+        console_output_fn(f"Количество: {count}")
+        
+        for i in range(count):
+            if stop_flag and stop_flag():
+                console_output_fn("[STOPPED] Выполнение прервано")
+                return
+            
+            console_output_fn(f"  Шаг {i+1}/{count}")
+            QThread.msleep(500)  # Неблокирующая пауза
+        
         console_output_fn("[DONE]")
 
 
-class MyPluginWidget(QWidget):
-    """Виджет настроек плагина"""
-    def __init__(self, tab_ctx, parent=None):
-        super().__init__(parent)
+# Виджет настроек создается автоматически на основе get_settings()!
+# Не нужно создавать MyPluginWidget вручную.
         self.tab_ctx = tab_ctx
         
         layout = QVBoxLayout(self)
@@ -227,6 +337,29 @@ class PluginInterface(ABC):
     def execute(self, tab_context, console_output_fn):
         """Выполняет скрипт плагина"""
         pass
+```
+
+### MainWindow
+
+Главное окно приложения с системой вкладок:
+
+```python
+window = MainWindow(
+    plugin_registry, 
+    organization_name="MyCompany",  # Обязательно: имя организации
+    application_name="MyApplication"  # Обязательно: имя приложения
+)
+```
+
+**Важно:** Параметры `organization_name` и `application_name` обязательны и используются для изоляции настроек между разными приложениями. Каждое приложение будет иметь свой собственный кэш вкладок и настроек, хранящихся в QSettings.
+
+**Пример:**
+```python
+# Приложение 1 - настройки сохраняются отдельно
+window1 = MainWindow(registry, "CompanyA", "App1")
+
+# Приложение 2 - настройки сохраняются отдельно от App1
+window2 = MainWindow(registry, "CompanyA", "App2")
 ```
 
 ### TabContext
@@ -467,7 +600,7 @@ pip install -e /path/to/sa-ui-operations-base
 Добавьте в `requirements.txt` вашего проекта:
 
 ```
-sa-ui-operations-base>=0.1.0
+sa-ui-operations-base>=1.1.0
 ```
 
 Затем установите:

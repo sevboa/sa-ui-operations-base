@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
+from .settings import SettingItem
+
 
 class PluginInterface(ABC):
     """
@@ -37,14 +39,25 @@ class PluginInterface(ABC):
         """
         pass
     
+    def get_settings(self) -> List[SettingItem]:
+        """
+        Возвращает список настроек плагина.
+        По умолчанию возвращает пустой список (настройки не обязательны).
+        
+        Returns:
+            Список объектов SettingItem, определяющих настройки плагина
+        """
+        return []
+    
     @abstractmethod
-    def execute(self, tab_context, console_output_fn):
+    def execute(self, tab_context, console_output_fn, stop_flag=None):
         """
         Выполняет скрипт плагина.
         
         Args:
             tab_context: Контекст вкладки (TabContext) для доступа к настройкам
             console_output_fn: Функция для вывода текста в консоль (callable(str))
+            stop_flag: Объект для проверки остановки (опционально, callable() -> bool)
         """
         pass
 

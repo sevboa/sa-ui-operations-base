@@ -7,7 +7,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name="sa-ui-operations-base",
-    version="0.1.0",
+    version="1.1.0",
     author="Your Name",
     author_email="your.email@example.com",
     description="Универсальная библиотека для создания GUI приложений на PySide6 с системой плагинов",
@@ -16,7 +16,7 @@ setup(
     url="https://github.com/sevboa/sa-ui-operations-base",
     packages=find_packages(exclude=["examples", "tests", "*.tests", "*.tests.*"]),
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
@@ -26,6 +26,7 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
     python_requires=">=3.8",
     install_requires=[

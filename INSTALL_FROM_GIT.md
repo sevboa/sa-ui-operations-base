@@ -1,98 +1,259 @@
-# Установка конкретной версии из Git
+# Установка из Git - Руководство
 
-## Установка по тегу версии
+## Важно: Используйте виртуальное окружение!
 
-### Установка версии 0.1.0
+**⚠️ Не устанавливайте в системный Python!** Используйте виртуальное окружение:
 
+```bash
+# Создайте виртуальное окружение (если еще не создано)
+python -m venv .venv
+
+# Активируйте его
+# Linux/macOS:
+source .venv/bin/activate
+# Windows:
+# .venv\Scripts\activate
+
+# Теперь устанавливайте пакет
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
+```
+
+## Как это работает?
+
+При установке из Git pip клонирует репозиторий и устанавливает пакет из указанной точки (тег, ветка или коммит).
+
+## Рекомендации по выбору источника установки
+
+### ✅ Используйте теги версий (рекомендуется для продакшена)
+
+**Когда использовать:**
+- Для стабильных проектов
+- Когда нужна конкретная версия
+- Для production окружений
+- Когда важна воспроизводимость
+
+**Преимущества:**
+- ✅ Фиксированная версия - всегда одна и та же
+- ✅ Стабильность - теги создаются для проверенных релизов
+- ✅ Воспроизводимость - одинаковый код у всех
+
+**Пример:**
 ```bash
 pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
 ```
 
-### Установка конкретного коммита
+### ⚠️ Используйте ветку develop (только для разработки)
 
+**Когда использовать:**
+- Для разработки и тестирования
+- Когда нужны последние изменения
+- Для локальной разработки
+- Когда тестируете новые функции
+
+**Недостатки:**
+- ⚠️ Нестабильность - код может меняться
+- ⚠️ Невоспроизводимость - разные коммиты = разные версии
+- ⚠️ Возможны баги - код может быть не протестирован
+
+**Пример:**
 ```bash
-pip install git+https://github.com/sevboa/sa-ui-operations-base.git@<commit-hash>
-```
-
-### Установка из ветки
-
-```bash
-# Из ветки develop
 pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
-
-# Из ветки main/master
-pip install git+https://github.com/sevboa/sa-ui-operations-base.git@main
 ```
 
-### Установка в режиме разработки
+## Способы установки
+
+### 1. Установка конкретной версии по тегу (РЕКОМЕНДУЕТСЯ)
+
+**Важно:** Убедитесь, что виртуальное окружение активировано!
 
 ```bash
-# Клонируйте репозиторий
-git clone https://github.com/sevboa/sa-ui-operations-base.git
-cd sa-ui-operations-base
+# Активируйте виртуальное окружение (если еще не активировано)
+source .venv/bin/activate  # Linux/macOS
+# или
+# .venv\Scripts\activate  # Windows
 
-# Переключитесь на нужную версию
-git checkout v0.1.0
+# Версия 0.1.0
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
 
-# Установите в режиме разработки
-pip install -e .
+# Версия 0.1.1 (когда будет создана)
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.1
+```
+
+**Плюсы:**
+- Стабильная версия
+- Можно откатиться к предыдущей версии
+- Все получат одинаковый код
+
+### 2. Установка из ветки develop (только для разработки)
+
+**Важно:** Убедитесь, что виртуальное окружение активировано!
+
+```bash
+# Активируйте виртуальное окружение
+source .venv/bin/activate  # Linux/macOS
+
+# Последний коммит из ветки develop
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+```
+
+**Когда использовать:**
+- Тестируете новые функции до релиза
+- Разрабатываете плагины и нужны последние изменения
+- Локальная разработка
+
+**Важно:** После каждого обновления develop нужно переустанавливать:
+```bash
+pip install --upgrade --force-reinstall git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+```
+
+### 3. Установка конкретного коммита
+
+```bash
+# По хешу коммита
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@abc123def456
+```
+
+**Когда использовать:**
+- Нужна конкретная версия между релизами
+- Отладка проблем с конкретным коммитом
+
+### 4. Установка из ветки main/master
+
+```bash
+# Если у вас есть стабильная ветка main
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@main
 ```
 
 ## Использование в requirements.txt
 
-### Конкретная версия по тегу
+### Рекомендуемый способ (по тегу):
 
 ```txt
+# Стабильная версия 0.1.0
 sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
 ```
 
-### Конкретный коммит
+### Для разработки (из ветки):
 
 ```txt
+# ⚠️ Только для разработки! Может быть нестабильно
+sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+```
+
+### С указанием конкретного коммита:
+
+```txt
+# Конкретный коммит (для отладки)
 sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@abc123def456
 ```
 
-### Ветка (последний коммит)
+## Рекомендуемый workflow
 
-```txt
-sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+### Для production проектов:
+
+1. **Используйте теги версий:**
+   ```txt
+   sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
+   ```
+
+2. **Обновляйте версию явно:**
+   ```txt
+   sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.1
+   ```
+
+3. **Тестируйте новую версию перед обновлением:**
+   ```bash
+   # Установите новую версию в тестовом окружении
+   pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.1
+   # Протестируйте
+   # Если всё ок, обновите requirements.txt
+   ```
+
+### Для разработки:
+
+1. **Используйте develop для тестирования:**
+   ```bash
+   pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+   ```
+
+2. **После релиза переключитесь на тег:**
+
+```bash
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
 ```
 
 ## Проверка установленной версии
 
 ```python
 from sa_ui_operations import __version__
-print(__version__)  # Выведет: 0.1.0
+print(f"Установленная версия: {__version__}")
+```
+
+## Обновление установленной версии
+
+### Если установлена из тега:
+
+```bash
+# Установить новую версию
+pip install --upgrade git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.1
+```
+
+### Если установлена из ветки:
+
+```bash
+# Получить последние изменения из ветки
+pip install --upgrade --force-reinstall git+https://github.com/sevboa/sa-ui-operations-base.git@develop
 ```
 
 ## Доступные версии
 
-Проверить доступные теги можно на GitHub или через:
+Проверить доступные теги можно:
 
 ```bash
+# Через git
 git ls-remote --tags https://github.com/sevboa/sa-ui-operations-base.git
+
+# Или на GitHub:
+# https://github.com/sevboa/sa-ui-operations-base/tags
 ```
 
-## Обновление версии
+## Сравнение подходов
 
-При обновлении версии:
+| Способ | Стабильность | Воспроизводимость | Когда использовать |
+|--------|--------------|-------------------|---------------------|
+| **Тег версии** | ✅ Высокая | ✅ Да | Production, стабильные проекты |
+| **Ветка develop** | ⚠️ Низкая | ❌ Нет | Разработка, тестирование |
+| **Конкретный коммит** | ✅ Средняя | ✅ Да | Отладка, промежуточные версии |
 
-1. Обновите версию в файлах:
-   - `setup.py` → `version="0.1.1"`
-   - `pyproject.toml` → `version = "0.1.1"`
-   - `sa_ui_operations/__init__.py` → `__version__ = "0.1.1"`
+## Итоговые рекомендации
 
-2. Создайте коммит и тег:
-   ```bash
-   git add .
-   git commit -m "Версия 0.1.1"
-   git tag -a v0.1.1 -m "Версия 0.1.1"
-   git push origin main
-   git push origin v0.1.1
-   ```
+1. **Для продакшена:** Используйте только теги версий (`@v0.1.0`)
+2. **Для разработки:** Можно использовать develop, но помните о нестабильности
+3. **Для командной работы:** Всегда используйте теги - так все получат одинаковый код
+4. **При обновлении:** Сначала тестируйте новую версию, затем обновляйте requirements.txt
 
-3. Установка новой версии:
-   ```bash
-   pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.1
-   ```
+## Примеры для разных сценариев
 
+### Сценарий 1: Production проект
+
+```txt
+# requirements.txt
+sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
+```
+
+### Сценарий 2: Разработка плагина
+
+```bash
+# Установить последнюю версию для тестирования
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+
+# После релиза переключиться на тег
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v0.1.0
+```
+
+### Сценарий 3: Отладка проблемы
+
+```bash
+# Установить конкретный коммит, где всё работало
+pip install git+https://github.com/sevboa/sa-ui-operations-base.git@abc123def456
+```

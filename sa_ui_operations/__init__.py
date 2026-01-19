@@ -2,7 +2,7 @@
 SA UI Operations Base - Универсальная библиотека для создания GUI приложений с плагинами
 """
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 from .base_ui import (
     MainWindow,
@@ -15,6 +15,14 @@ from .plugin_system import (
     PluginInterface,
     PluginRegistry,
 )
+from .settings import (
+    SettingItem,
+    SettingType,
+    StringSetting,
+    PasswordSetting,
+    IntegerSetting,
+    FloatSetting,
+)
 
 __all__ = [
     "MainWindow",
@@ -24,6 +32,12 @@ __all__ = [
     "DebouncedWriter",
     "PluginInterface",
     "PluginRegistry",
+    "SettingItem",
+    "SettingType",
+    "StringSetting",
+    "PasswordSetting",
+    "IntegerSetting",
+    "FloatSetting",
     "__version__",
 ]
 

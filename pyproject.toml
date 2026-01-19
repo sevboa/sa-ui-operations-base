@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sa-ui-operations-base"
-version = "0.1.0"
+version = "1.1.0"
 description = "Универсальная библиотека для создания GUI приложений на PySide6 с системой плагинов"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["gui", "pyside6", "qt", "plugins", "ui", "framework"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
