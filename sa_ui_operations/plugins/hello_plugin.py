@@ -1,5 +1,11 @@
 from ..plugin_system import PluginInterface
-from ..settings import StringSetting, IntegerSetting
+from ..settings import (
+    StringSetting,
+    IntegerSetting,
+    BooleanSetting,
+    StringListSetting,
+    GroupSetting,
+)
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QCheckBox, QSpinBox, QHBoxLayout
 from PySide6.QtCore import QThread
 
@@ -19,29 +25,55 @@ class HelloPlugin(PluginInterface):
     def get_settings(self):
         """Возвращает список настроек для плагина"""
         return [
-            StringSetting(
-                key="api_url",
-                label="API URL",
-                default_value="https://api.example.com",
-                description="Базовый URL API"
-            ),
-            StringSetting(
-                key="api_token",
-                label="API Token",
-                default_value="",
-                description="Токен авторизации"
+            GroupSetting(
+                key="env",
+                label="Режим",
+                modes=["dev", "prod"],
+                description="Выбор набора параметров окружения",
+                group_settings=[
+                    StringSetting(
+                        key="api_url",
+                        label="API URL",
+                        default_value="https://api.example.com",
+                        description="Базовый URL API",
+                        regex_pattern=r"^https?://.+"
+                    ),
+                    StringSetting(
+                        key="api_token",
+                        label="API Token",
+                        default_value="",
+                        description="Токен авторизации"
+                    ),
+                ],
             ),
             IntegerSetting(
                 key="delay",
                 label="Задержка (мс)",
                 default_value=1000,
-                description="Задержка между запросами в миллисекундах"
+                description="Задержка между запросами в миллисекундах",
+                min_value=100,
+                max_value=10000
             ),
             IntegerSetting(
                 key="count",
                 label="Количество итераций",
                 default_value=10,
-                description="Количество повторений"
+                description="Количество повторений",
+                min_value=1,
+                max_value=100
+            ),
+            BooleanSetting(
+                key="verbose",
+                label="Подробный вывод",
+                default_value=False,
+                description="Включить подробный вывод"
+            ),
+            StringListSetting(
+                key="region",
+                label="Регион",
+                options=["eu", "us", "apac"],
+                default_value="eu",
+                description="Регион для запросов"
             ),
         ]
     
@@ -58,22 +90,42 @@ class HelloPlugin(PluginInterface):
         settings_dict = {s.key: s for s in settings}
         
         # Получаем значения настроек
-        api_url = settings_dict.get("api_url", StringSetting("api_url", "API URL", "")).get_value(tab_context)
-        api_token = settings_dict.get("api_token", StringSetting("api_token", "API Token", "")).get_value(tab_context)
+        env_setting = settings_dict.get(
+            "env",
+            GroupSetting("env", "Режим", ["dev"], group_settings=[])
+        )
+        env_values = env_setting.get_active_values(tab_context)
+        env_mode = env_setting.get_active_mode(tab_context)
+        api_url = env_values.get("api_url", "")
+        api_token = env_values.get("api_token", "")
         delay = settings_dict.get("delay", IntegerSetting("delay", "Задержка", 1000)).get_value(tab_context)
         count = settings_dict.get("count", IntegerSetting("count", "Количество", 10)).get_value(tab_context)
         
-        # Получаем старые настройки для обратной совместимости
-        verbose = tab_context.settings.value(
-            tab_context.key("hello/verbose"), False, type=bool
+        # Получаем настройки, с поддержкой старых ключей
+        verbose_setting = settings_dict.get(
+            "verbose",
+            BooleanSetting("verbose", "Подробный вывод", False)
         )
+        verbose_key = tab_context.key(f"settings/{verbose_setting.key}")
+        if tab_context.settings.contains(verbose_key):
+            verbose = verbose_setting.get_value(tab_context)
+        else:
+            verbose = tab_context.settings.value(
+                tab_context.key("hello/verbose"), False, type=bool
+            )
+        region = settings_dict.get(
+            "region",
+            StringListSetting("region", "Регион", options=["eu", "us", "apac"], default_value="eu")
+        ).get_value(tab_context)
         
         # Выполняем скрипт
         console_output_fn(f"[RUN] Hello plugin")
+        console_output_fn(f"  Режим: {env_mode}")
         console_output_fn(f"  API URL: {api_url}")
         console_output_fn(f"  API Token: {'*' * len(api_token) if api_token else '(не задан)'}")
         console_output_fn(f"  Задержка: {delay} мс")
         console_output_fn(f"  Количество итераций: {count}")
+        console_output_fn(f"  Регион: {region}")
         
         if verbose:
             console_output_fn("Verbose mode enabled")

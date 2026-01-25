@@ -223,9 +223,12 @@ StringSetting(
     key="server_name",
     label="Имя сервера",
     default_value="localhost",
-    description="Имя или адрес сервера"
+    description="Имя или адрес сервера",
+    regex_pattern=r"^[a-zA-Z0-9._-]+$"
 )
 ```
+
+Если `regex_pattern` задан и строка не соответствует шаблону, поле подсвечивается красным и значение не сохраняется.
 
 ### 2. PasswordSetting - Пароль (с маскированием)
 
@@ -249,7 +252,9 @@ IntegerSetting(
     key="port",
     label="Порт",
     default_value=8080,
-    description="Номер порта сервера"
+    description="Номер порта сервера",
+    min_value=1,
+    max_value=65535
 )
 ```
 
@@ -262,8 +267,77 @@ FloatSetting(
     key="threshold",
     label="Порог",
     default_value=0.5,
-    description="Пороговое значение (0.0 - 1.0)"
+    description="Пороговое значение (0.0 - 1.0)",
+    min_value=0.0,
+    max_value=1.0
 )
+```
+
+### 5. BooleanSetting - Булево значение
+
+```python
+from sa_ui_operations.settings import BooleanSetting
+
+BooleanSetting(
+    key="use_cache",
+    label="Использовать кэш",
+    default_value=True,
+    description="Включает кеширование результатов"
+)
+```
+
+### 6. StringListSetting - Выбор значения из списка строк
+
+```python
+from sa_ui_operations.settings import StringListSetting
+
+StringListSetting(
+    key="region",
+    label="Регион",
+    options=["eu", "us", "apac"],
+    default_value="eu",
+    description="Регион для запросов"
+)
+```
+
+---
+
+## Группы (режимы) настроек
+
+Группа — это отдельная настройка, которая содержит дочерние настройки.
+Для каждой группы задан список режимов (например, `dev`/`prod`), и значения
+дочерних настроек хранятся отдельно для каждого режима.
+
+```python
+from sa_ui_operations.settings import GroupSetting, StringSetting
+
+GroupSetting(
+    key="env",
+    label="Режим",
+    modes=["dev", "prod"],
+    description="Набор параметров окружения",
+    group_settings=[
+        StringSetting(
+            key="api_url",
+            label="API URL",
+            default_value="https://api.example.com"
+        ),
+        StringSetting(
+            key="api_token",
+            label="API Token",
+            default_value=""
+        ),
+    ],
+)
+```
+
+В коде плагина можно получить значения активного режима:
+
+```python
+env_setting = settings_dict["env"]
+env_mode = env_setting.get_active_mode(tab_context)
+env_values = env_setting.get_active_values(tab_context)
+api_url = env_values["api_url"]
 ```
 
 ---
@@ -505,6 +579,7 @@ QThread.msleep(1000)  # 1 секунда
 ## Примеры в репозитории
 
 Полные рабочие примеры плагинов можно найти в:
+
 - `sa_ui_operations/plugins/hello_plugin.py` - пример с настройками
 - `sa_ui_operations/plugins/other_plugin.py` - пример с паузой и остановкой
 
@@ -513,7 +588,7 @@ QThread.msleep(1000)  # 1 секунда
 ## Вопросы и поддержка
 
 Если у вас возникли вопросы по созданию плагинов, проверьте:
+
 1. Примеры плагинов в репозитории
 2. Документацию API в `README.md`
 3. Исходный код базовых классов в `sa_ui_operations/`
-

@@ -24,7 +24,7 @@ python setup.py check
 python setup.py sdist
 ```
 
-Создаст файл в `dist/sa-ui-operations-base-0.1.0.tar.gz`
+Создаст файл в `dist/sa-ui-operations-base-1.2.0.tar.gz`
 
 ### Создание wheel дистрибутива
 
@@ -32,7 +32,7 @@ python setup.py sdist
 python setup.py bdist_wheel
 ```
 
-Создаст файл в `dist/sa_ui_operations_base-0.1.0-py3-none-any.whl`
+Создаст файл в `dist/sa_ui_operations_base-1.2.0-py3-none-any.whl`
 
 ### Создание обоих форматов
 
@@ -45,13 +45,13 @@ python setup.py sdist bdist_wheel
 ### Из tar.gz
 
 ```bash
-pip install dist/sa-ui-operations-base-0.1.0.tar.gz
+pip install dist/sa-ui-operations-base-1.2.0.tar.gz
 ```
 
 ### Из wheel
 
 ```bash
-pip install dist/sa_ui_operations_base-0.1.0-py3-none-any.whl
+pip install dist/sa_ui_operations_base-1.2.0-py3-none-any.whl
 ```
 
 ## Публикация в PyPI
@@ -96,17 +96,17 @@ pip install sa-ui-operations-base
 
 1. Обновите версию в `setup.py`:
    ```python
-   version="0.1.1"
+   version="1.2.0"
    ```
 
 2. Обновите версию в `pyproject.toml`:
    ```toml
-   version = "0.1.1"
+   version = "1.2.0"
    ```
 
 3. Обновите версию в `sa_ui_operations/__init__.py`:
    ```python
-   __version__ = "0.1.1"
+   __version__ = "1.2.0"
    ```
 
 4. Соберите и опубликуйте новую версию

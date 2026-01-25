@@ -2,11 +2,12 @@
 
 ## Установка из исходников
 
-### 1. Клонирование репозитория
+### 1. Скачивание исходников
 
 ```bash
-git clone https://github.com/sevboa/sa-ui-operations-base.git
-cd sa-ui-operations-base
+curl -L -o sa-ui-operations-base.zip https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
+unzip sa-ui-operations-base.zip
+cd sa-ui-operations-base-develop
 ```
 
 ### 2. Установка в режиме разработки
@@ -97,7 +98,7 @@ python setup.py bdist_wheel
 ### Установка из wheel
 
 ```bash
-pip install dist/sa_ui_operations_base-0.1.0-py3-none-any.whl
+pip install dist/sa_ui_operations_base-1.2.0-py3-none-any.whl
 ```
 
 ## Публикация в PyPI (опционально)
@@ -141,11 +142,11 @@ pip install sa-ui-operations-base
 Для обновления версии измените `version` в `setup.py` и `pyproject.toml`:
 
 ```python
-version="0.1.1"  # в setup.py
+version="1.2.0"  # в setup.py
 ```
 
 ```toml
-version = "0.1.1"  # в pyproject.toml
+version = "1.2.0"  # в pyproject.toml
 ```
 
 Также обновите `__version__` в `sa_ui_operations/__init__.py`.

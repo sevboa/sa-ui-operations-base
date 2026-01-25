@@ -48,6 +48,7 @@ class PluginInterface(ABC):
             Список объектов SettingItem, определяющих настройки плагина
         """
         return []
+
     
     @abstractmethod
     def execute(self, tab_context, console_output_fn, stop_flag=None):

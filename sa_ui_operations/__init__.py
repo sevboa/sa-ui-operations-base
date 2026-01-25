@@ -2,7 +2,7 @@
 SA UI Operations Base - Универсальная библиотека для создания GUI приложений с плагинами
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from .base_ui import (
     MainWindow,
@@ -22,6 +22,10 @@ from .settings import (
     PasswordSetting,
     IntegerSetting,
     FloatSetting,
+    BooleanSetting,
+    StringListSetting,
+    FilePathSetting,
+    GroupSetting,
 )
 
 __all__ = [
@@ -38,6 +42,10 @@ __all__ = [
     "PasswordSetting",
     "IntegerSetting",
     "FloatSetting",
+    "BooleanSetting",
+    "StringListSetting",
+    "FilePathSetting",
+    "GroupSetting",
     "__version__",
 ]
 

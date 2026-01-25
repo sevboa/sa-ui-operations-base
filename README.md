@@ -17,6 +17,7 @@
 - **[PLUGIN_GUIDE.md](PLUGIN_GUIDE.md)** - 📖 Полное руководство по созданию плагинов с примерами
 - **[QUICKSTART.md](QUICKSTART.md)** - Быстрый старт
 - **[DEV_DEBUG.md](DEV_DEBUG.md)** - Отладка и разработка
+- **[CHANGELOG.md](CHANGELOG.md)** - Изменения по версиям
 
 ## Установка
 
@@ -31,11 +32,11 @@ source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate  # Windows
 ```
 
-### Рекомендуемый способ: установка из Git по тегу версии
+### Рекомендуемый способ: установка из ZIP по тегу версии
 
 ```bash
-# Установка стабильной версии 1.1.0
-pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v1.1.0
+# Установка стабильной версии 1.2.0 (без Git)
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
 ```
 
 **Почему теги?** Теги обеспечивают стабильность и воспроизводимость - все получат одинаковый код.
@@ -45,9 +46,10 @@ pip install git+https://github.com/sevboa/sa-ui-operations-base.git@v1.1.0
 ### Установка из исходников (для разработки)
 
 ```bash
-# Клонируйте репозиторий
-git clone https://github.com/sevboa/sa-ui-operations-base.git
-cd sa-ui-operations-base
+# Скачайте ZIP-архив и распакуйте
+curl -L -o sa-ui-operations-base.zip https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
+unzip sa-ui-operations-base.zip
+cd sa-ui-operations-base-develop
 
 # Установите библиотеку в режиме разработки
 pip install -e .
@@ -72,7 +74,7 @@ python dev_run.py
 
 ```bash
 # ⚠️ Внимание: код может быть нестабильным!
-pip install git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
 ```
 
 **Когда использовать develop:**
@@ -100,13 +102,13 @@ pip install sa-ui-operations-base
 
 ```txt
 # Рекомендуется: стабильная версия по тегу
-sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@v1.1.0
+sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
 
 # Или для разработки (не рекомендуется для production)
-# sa-ui-operations-base @ git+https://github.com/sevboa/sa-ui-operations-base.git@develop
+# sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
 ```
 
-Подробнее об установке из Git см. [INSTALL_FROM_GIT.md](INSTALL_FROM_GIT.md)
+Подробнее об установке из ZIP см. [INSTALL_FROM_GIT.md](INSTALL_FROM_GIT.md)
 
 ## Быстрый старт
 
@@ -150,7 +152,13 @@ if __name__ == "__main__":
 
 ```python
 from sa_ui_operations import PluginInterface
-from sa_ui_operations.settings import StringSetting, IntegerSetting
+from sa_ui_operations.settings import (
+    StringSetting,
+    IntegerSetting,
+    BooleanSetting,
+    StringListSetting,
+    FilePathSetting,
+)
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PySide6.QtCore import QThread
 
@@ -182,13 +190,35 @@ class MyPlugin(PluginInterface):
                 key="text",
                 label="Текст",
                 default_value="",
-                description="Введите текст для обработки"
+                description="Введите текст для обработки",
+                regex_pattern=r"^[a-zA-Z0-9 _.-]+$"
             ),
             IntegerSetting(
                 key="count",
                 label="Количество",
                 default_value=5,
-                description="Количество повторений"
+                description="Количество повторений",
+                min_value=1,
+                max_value=20
+            ),
+            BooleanSetting(
+                key="verbose",
+                label="Подробный вывод",
+                default_value=False,
+                description="Включить подробный вывод"
+            ),
+            StringListSetting(
+                key="mode",
+                label="Режим",
+                options=["fast", "normal", "safe"],
+                default_value="normal",
+                description="Режим выполнения"
+            ),
+            FilePathSetting(
+                key="config_path",
+                label="Конфиг",
+                default_value="",
+                description="Путь к конфигурационному файлу"
             ),
         ]
     
@@ -200,11 +230,18 @@ class MyPlugin(PluginInterface):
         
         text = settings_dict["text"].get_value(tab_context)
         count = settings_dict["count"].get_value(tab_context)
+        verbose = settings_dict["verbose"].get_value(tab_context)
+        mode = settings_dict["mode"].get_value(tab_context)
+        config_path = settings_dict["config_path"].get_value(tab_context)
         
         # Выполняем работу
         console_output_fn(f"[RUN] Мой плагин запущен")
         console_output_fn(f"Текст: {text}")
         console_output_fn(f"Количество: {count}")
+        console_output_fn(f"Режим: {mode}")
+        console_output_fn(f"Конфиг: {config_path if config_path else '(не задан)'}")
+        if verbose:
+            console_output_fn("Подробный вывод включен")
         
         for i in range(count):
             if stop_flag and stop_flag():
@@ -252,6 +289,34 @@ class MyPlugin(PluginInterface):
 from my_plugin import MyPlugin
 
 registry.register(MyPlugin())
+```
+
+### Группы настроек (режимы)
+
+Если нужен отдельный набор значений на разные режимы (`dev`/`prod`), используйте
+`GroupSetting` с дочерними настройками:
+
+```python
+from sa_ui_operations.settings import GroupSetting, StringSetting
+
+GroupSetting(
+    key="env",
+    label="Режим",
+    modes=["dev", "prod"],
+    group_settings=[
+        StringSetting(key="api_url", label="API URL", default_value="https://api.example.com"),
+        StringSetting(key="api_token", label="API Token", default_value=""),
+    ],
+)
+```
+
+Получение значений:
+
+```python
+env_setting = settings_dict["env"]
+env_mode = env_setting.get_active_mode(tab_context)
+env_values = env_setting.get_active_values(tab_context)
+api_url = env_values["api_url"]
 ```
 
 ## Архитектура
@@ -600,7 +665,7 @@ pip install -e /path/to/sa-ui-operations-base
 Добавьте в `requirements.txt` вашего проекта:
 
 ```
-sa-ui-operations-base>=1.1.0
+sa-ui-operations-base>=1.2.0
 ```
 
 Затем установите:

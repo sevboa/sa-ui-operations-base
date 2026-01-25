@@ -1,5 +1,6 @@
+import re
 import uuid
-from typing import List
+from typing import List, Tuple, Dict
 from PySide6.QtCore import Qt, QSettings, QTimer, Signal, QObject, QThread
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
@@ -7,9 +8,9 @@ from PySide6.QtWidgets import (
     QToolButton, QPushButton, QComboBox, QLineEdit,
     QLabel, QStackedWidget, QPlainTextEdit, QFrame,
     QSizePolicy, QMainWindow, QDoubleSpinBox,
-    QSpinBox, QGroupBox
+    QSpinBox, QGroupBox, QFileDialog, QCheckBox
 )
-from .settings import SettingItem, SettingType
+from .settings import SettingItem, SettingType, GroupSetting
 
 
 # ----------------------------
@@ -48,6 +49,45 @@ class TabContext(QObject):
     def global_key(self, local_key: str) -> str:
         # Глобальные настройки (общие для всех вкладок)
         return f"global/{local_key}"
+
+    def group_mode_key(self, group_key: str, is_global: bool) -> str:
+        local_key = f"settings_groups_meta/{group_key}/mode"
+        return self.global_key(local_key) if is_global else self.key(local_key)
+
+    def get_group_mode(self, group_key: str, default_mode: str, is_global: bool = False) -> str:
+        return self.settings.value(self.group_mode_key(group_key, is_global), default_mode, type=str)
+
+    def save_group_mode(self, group_key: str, mode: str, is_global: bool = False):
+        local_key = f"settings_groups_meta/{group_key}/mode"
+        if is_global:
+            self.save_global_value(local_key, mode)
+        else:
+            self.save_value(local_key, mode)
+
+    def grouped_value_key(self, group_key: str, mode: str, setting_key: str, is_global: bool) -> str:
+        local_key = f"settings_groups/{group_key}/{mode}/{setting_key}"
+        return self.global_key(local_key) if is_global else self.key(local_key)
+
+    def get_grouped_value(
+        self,
+        group_key: str,
+        mode: str,
+        setting_key: str,
+        default_value,
+        value_type=None,
+        is_global: bool = False,
+    ):
+        settings_key = self.grouped_value_key(group_key, mode, setting_key, is_global)
+        if value_type:
+            return self.settings.value(settings_key, default_value, type=value_type)
+        return self.settings.value(settings_key, default_value)
+
+    def save_grouped_value(self, group_key: str, mode: str, setting_key: str, value, is_global: bool = False):
+        local_key = f"settings_groups/{group_key}/{mode}/{setting_key}"
+        if is_global:
+            self.save_global_value(local_key, value)
+        else:
+            self.save_value(local_key, value)
 
     def save_value(self, local_key: str, value):
         self.settings.setValue(self.key(local_key), value)
@@ -135,14 +175,42 @@ class SettingsWidget(QWidget):
     Создает форму на основе списка SettingItem.
     Поддерживает разделение на общие настройки и настройки конкретного плагина.
     """
+    TEXT_MIN_WIDTH = 100
+    TEXT_MAX_WIDTH = 500
+    TEXT_PREFERRED_WIDTH = 500
+    FILE_BUTTON_WIDTH = 28
+    FILE_BUTTON_SPACING = 6
+    COMBOBOX_MIN_WIDTH = 100
+
+    class _PreferredLineEdit(QLineEdit):
+        def __init__(self, preferred_width: int, min_width: int, parent=None):
+            super().__init__(parent)
+            self._preferred_width = preferred_width
+            self._min_width = min_width
+
+        def sizeHint(self):
+            hint = super().sizeHint()
+            hint.setWidth(self._preferred_width)
+            return hint
+
+        def minimumSizeHint(self):
+            hint = super().minimumSizeHint()
+            hint.setWidth(self._min_width)
+            return hint
     
-    def __init__(self, tab_context, plugin_settings_list: List[SettingItem], 
-                 global_settings_list: List[SettingItem] = None, parent=None):
+    def __init__(
+        self,
+        tab_context,
+        plugin_settings_list: List[SettingItem],
+        global_settings_list: List[SettingItem] = None,
+        parent=None,
+    ):
         super().__init__(parent)
         self.tab_context = tab_context
         self.plugin_settings_list = plugin_settings_list or []
         self.global_settings_list = global_settings_list or []
         self._widgets = {}  # key -> widget mapping
+        self._group_widgets: Dict[Tuple[str, str], QWidget] = {}
         
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
@@ -172,6 +240,7 @@ class SettingsWidget(QWidget):
             layout.addWidget(plugin_group)
         
         layout.addStretch(1)
+
     
     def _create_settings_group(self, title: str, settings_list: List[SettingItem], is_global: bool):
         """Создает группу настроек с заголовком"""
@@ -182,16 +251,20 @@ class SettingsWidget(QWidget):
         
         # Создаем виджеты для каждой настройки
         for setting in settings_list:
+            if isinstance(setting, GroupSetting):
+                self._add_group_setting(group_layout, setting, is_global)
+                continue
+
             row = QHBoxLayout()
             
             label = QLabel(setting.label + ":")
-            label.setMinimumWidth(150)
+            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             row.addWidget(label)
             
             widget = self._create_setting_widget(setting)
             if widget:
                 self._widgets[setting.key] = widget
-                row.addWidget(widget, 1)
+                row.addWidget(widget)
                 
                 # Восстанавливаем значение
                 if is_global:
@@ -199,6 +272,7 @@ class SettingsWidget(QWidget):
                 else:
                     value = setting.get_value(self.tab_context)
                 self._set_widget_value(widget, setting.setting_type, value)
+                self._apply_string_validation_state(widget, setting)
                 
                 # Подключаем автосохранение
                 if is_global:
@@ -207,47 +281,151 @@ class SettingsWidget(QWidget):
                     self._connect_autosave(widget, setting)
             
             if setting.description:
-                desc_label = QLabel(setting.description)
-                desc_label.setStyleSheet("color: gray; font-size: 9pt;")
-                row.addWidget(desc_label)
+                row.addWidget(self._create_info_label(setting.description))
+
+            row.addStretch(1)
             
             group_layout.addLayout(row)
         
         return group
+
+    def _add_group_setting(self, group_layout: QVBoxLayout, setting: GroupSetting, is_global: bool):
+        group_key = setting.key
+
+        header = QHBoxLayout()
+        label = QLabel(setting.label + ":")
+        label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        header.addWidget(label)
+
+        combo = QComboBox()
+        for mode in setting.modes:
+            combo.addItem(mode)
+        header.addWidget(combo)
+
+        if setting.description:
+            header.addWidget(self._create_info_label(setting.description))
+
+        header.addStretch(1)
+        group_layout.addLayout(header)
+
+        default_mode = setting.default_mode
+        selected_mode = self.tab_context.get_group_mode(group_key, default_mode, is_global=is_global)
+        if setting.modes:
+            if selected_mode not in setting.modes:
+                selected_mode = setting.modes[0]
+        combo.setCurrentText(selected_mode)
+        self.tab_context.save_group_mode(group_key, selected_mode, is_global=is_global)
+
+        combo.currentTextChanged.connect(
+            lambda mode: self._on_group_changed(setting, is_global, mode)
+        )
+
+        for child in setting.group_settings:
+            row = QHBoxLayout()
+            row.addSpacing(12)
+            child_label = QLabel(child.label + ":")
+            child_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            row.addWidget(child_label)
+
+            widget = self._create_setting_widget(child)
+            if widget:
+                self._group_widgets[(group_key, child.key)] = widget
+                row.addWidget(widget)
+
+                value = self._get_grouped_value(child, group_key, selected_mode, is_global)
+                self._set_widget_value(widget, child.setting_type, value)
+                self._apply_string_validation_state(widget, child)
+
+                self._connect_autosave_grouped(widget, child, group_key, is_global, default_mode)
+
+            if child.description:
+                row.addWidget(self._create_info_label(child.description))
+
+            row.addStretch(1)
+            group_layout.addLayout(row)
+
+    def _on_group_changed(self, setting: GroupSetting, is_global: bool, mode: str):
+        group_key = setting.key
+        self.tab_context.save_group_mode(group_key, mode, is_global=is_global)
+        for child in setting.group_settings:
+            widget = self._group_widgets.get((group_key, child.key))
+            if widget:
+                value = self._get_grouped_value(child, group_key, mode, is_global)
+                self._set_widget_value(widget, child.setting_type, value)
+                self._apply_string_validation_state(widget, child)
     
     def _get_global_value(self, setting: SettingItem):
         """Получает значение глобальной настройки"""
         settings_key = self.tab_context.global_key(f"settings/{setting.key}")
-        
-        if setting.setting_type == SettingType.INTEGER:
-            return self.tab_context.settings.value(settings_key, setting.default_value, type=int)
-        elif setting.setting_type == SettingType.FLOAT:
-            return self.tab_context.settings.value(settings_key, setting.default_value, type=float)
-        elif setting.setting_type == SettingType.STRING:
-            return self.tab_context.settings.value(settings_key, setting.default_value, type=str)
-        elif setting.setting_type == SettingType.PASSWORD:
-            return self.tab_context.settings.value(settings_key, setting.default_value, type=str)
-        else:
-            return self.tab_context.settings.value(settings_key, setting.default_value)
+        type_map = {
+            SettingType.INTEGER: int,
+            SettingType.FLOAT: float,
+            SettingType.STRING: str,
+            SettingType.PASSWORD: str,
+            SettingType.BOOLEAN: bool,
+            SettingType.STRING_LIST: str,
+            SettingType.FILE_PATH: str,
+        }
+        value_type = type_map.get(setting.setting_type)
+        if value_type:
+            return self.tab_context.settings.value(settings_key, setting.default_value, type=value_type)
+        return self.tab_context.settings.value(settings_key, setting.default_value)
+
+    def _get_grouped_value(self, setting: SettingItem, group_key: str, mode: str, is_global: bool):
+        value_type = self._setting_value_type(setting)
+        return self.tab_context.get_grouped_value(
+            group_key,
+            mode,
+            setting.key,
+            setting.default_value,
+            value_type=value_type,
+            is_global=is_global,
+        )
+
+    def _save_grouped_value(self, setting: SettingItem, group_key: str, mode: str, value, is_global: bool):
+        self.tab_context.save_grouped_value(group_key, mode, setting.key, value, is_global=is_global)
     
     def _create_setting_widget(self, setting: SettingItem):
         """Создает виджет для настройки в зависимости от типа"""
         if setting.setting_type == SettingType.STRING:
-            widget = QLineEdit()
-            return widget
+            return self._create_text_input()
         elif setting.setting_type == SettingType.PASSWORD:
-            widget = QLineEdit()
-            widget.setEchoMode(QLineEdit.Password)
-            return widget
+            return self._create_text_input(is_password=True)
         elif setting.setting_type == SettingType.INTEGER:
             widget = QSpinBox()
-            widget.setRange(-2147483647, 2147483647)  # Qt int range
+            min_value = getattr(setting, "min_value", None)
+            max_value = getattr(setting, "max_value", None)
+            widget.setRange(
+                min_value if min_value is not None else -2147483647,
+                max_value if max_value is not None else 2147483647
+            )
+            widget.setFixedWidth(self._spinbox_width(widget, max_value))
             return widget
         elif setting.setting_type == SettingType.FLOAT:
             widget = QDoubleSpinBox()
-            widget.setRange(-1e10, 1e10)
+            min_value = getattr(setting, "min_value", None)
+            max_value = getattr(setting, "max_value", None)
+            widget.setRange(
+                min_value if min_value is not None else -1e10,
+                max_value if max_value is not None else 1e10
+            )
             widget.setDecimals(6)
+            widget.setFixedWidth(self._spinbox_width(widget, max_value))
             return widget
+        elif setting.setting_type == SettingType.BOOLEAN:
+            widget = QCheckBox()
+            return widget
+        elif setting.setting_type == SettingType.STRING_LIST:
+            widget = QComboBox()
+            options = getattr(setting, "options", [])
+            for option in options:
+                widget.addItem(option)
+            if not options:
+                widget.setEnabled(False)
+            widget.setFixedWidth(self._combobox_width(widget, options))
+            return widget
+        elif setting.setting_type == SettingType.FILE_PATH:
+            return self._create_file_path_widget()
         return None
     
     def _set_widget_value(self, widget, setting_type: SettingType, value):
@@ -258,20 +436,194 @@ class SettingsWidget(QWidget):
             widget.setValue(int(value) if value is not None else 0)
         elif setting_type == SettingType.FLOAT:
             widget.setValue(float(value) if value is not None else 0.0)
+        elif setting_type == SettingType.BOOLEAN and isinstance(widget, QCheckBox):
+            widget.setChecked(bool(value))
+        elif setting_type == SettingType.STRING_LIST and isinstance(widget, QComboBox):
+            text_value = "" if value is None else str(value)
+            index = widget.findText(text_value)
+            if index == -1 and widget.count() > 0:
+                index = 0
+            if index >= 0:
+                widget.setCurrentIndex(index)
+        elif setting_type == SettingType.FILE_PATH:
+            line_edit = self._get_file_path_edit(widget)
+            if line_edit:
+                line_edit.setText(str(value) if value is not None else "")
     
     def _connect_autosave(self, widget, setting: SettingItem):
         """Подключает автосохранение при изменении значения (для настроек плагина)"""
         if isinstance(widget, QLineEdit):
-            widget.textChanged.connect(lambda v: setting.save_value(self.tab_context, v))
+            if setting.setting_type == SettingType.STRING and getattr(setting, "regex_pattern", None):
+                def _on_text_changed(v: str):
+                    if self._apply_string_validation_state(widget, setting):
+                        setting.save_value(self.tab_context, v)
+                widget.textChanged.connect(_on_text_changed)
+            else:
+                widget.textChanged.connect(lambda v: setting.save_value(self.tab_context, v))
         elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
             widget.valueChanged.connect(lambda v: setting.save_value(self.tab_context, v))
+        elif isinstance(widget, QCheckBox):
+            widget.toggled.connect(lambda v: setting.save_value(self.tab_context, bool(v)))
+        elif isinstance(widget, QComboBox):
+            widget.currentTextChanged.connect(lambda v: setting.save_value(self.tab_context, v))
+        else:
+            line_edit = self._get_file_path_edit(widget)
+            if line_edit:
+                line_edit.textChanged.connect(lambda v: setting.save_value(self.tab_context, v))
+
+    def _connect_autosave_grouped(
+        self,
+        widget,
+        setting: SettingItem,
+        group_key: str,
+        is_global: bool,
+        default_mode: str,
+    ):
+        def current_mode() -> str:
+            return self.tab_context.get_group_mode(group_key, default_mode, is_global=is_global)
+
+        if isinstance(widget, QLineEdit):
+            if setting.setting_type == SettingType.STRING and getattr(setting, "regex_pattern", None):
+                def _on_text_changed(v: str):
+                    if self._apply_string_validation_state(widget, setting):
+                        self._save_grouped_value(setting, group_key, current_mode(), v, is_global)
+                widget.textChanged.connect(_on_text_changed)
+            else:
+                widget.textChanged.connect(
+                    lambda v: self._save_grouped_value(setting, group_key, current_mode(), v, is_global)
+                )
+        elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+            widget.valueChanged.connect(
+                lambda v: self._save_grouped_value(setting, group_key, current_mode(), v, is_global)
+            )
+        elif isinstance(widget, QCheckBox):
+            widget.toggled.connect(
+                lambda v: self._save_grouped_value(setting, group_key, current_mode(), bool(v), is_global)
+            )
+        elif isinstance(widget, QComboBox):
+            widget.currentTextChanged.connect(
+                lambda v: self._save_grouped_value(setting, group_key, current_mode(), v, is_global)
+            )
+        else:
+            line_edit = self._get_file_path_edit(widget)
+            if line_edit:
+                line_edit.textChanged.connect(
+                    lambda v: self._save_grouped_value(setting, group_key, current_mode(), v, is_global)
+                )
     
     def _connect_autosave_global(self, widget, setting: SettingItem):
         """Подключает автосохранение при изменении значения (для глобальных настроек)"""
         if isinstance(widget, QLineEdit):
-            widget.textChanged.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", v))
+            if setting.setting_type == SettingType.STRING and getattr(setting, "regex_pattern", None):
+                def _on_text_changed(v: str):
+                    if self._apply_string_validation_state(widget, setting):
+                        self.tab_context.save_global_value(f"settings/{setting.key}", v)
+                widget.textChanged.connect(_on_text_changed)
+            else:
+                widget.textChanged.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", v))
         elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
             widget.valueChanged.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", v))
+        elif isinstance(widget, QCheckBox):
+            widget.toggled.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", bool(v)))
+        elif isinstance(widget, QComboBox):
+            widget.currentTextChanged.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", v))
+        else:
+            line_edit = self._get_file_path_edit(widget)
+            if line_edit:
+                line_edit.textChanged.connect(lambda v: self.tab_context.save_global_value(f"settings/{setting.key}", v))
+
+    def _apply_string_validation_state(self, widget, setting: SettingItem) -> bool:
+        """Проверяет строку по regex и обновляет подсветку"""
+        if not isinstance(widget, QLineEdit):
+            return True
+        if setting.setting_type != SettingType.STRING:
+            return True
+        pattern = getattr(setting, "regex_pattern", None)
+        if not pattern:
+            widget.setStyleSheet("")
+            return True
+        try:
+            is_valid = re.fullmatch(pattern, widget.text() or "") is not None
+        except re.error:
+            is_valid = True
+        if is_valid:
+            widget.setStyleSheet("")
+        else:
+            widget.setStyleSheet("background-color: #ffdddd;")
+        return is_valid
+
+    def _get_file_path_edit(self, widget):
+        if isinstance(widget, QWidget):
+            line_edit = widget.property("line_edit")
+            if isinstance(line_edit, QLineEdit):
+                return line_edit
+        return None
+
+    def _setting_value_type(self, setting: SettingItem):
+        type_map = {
+            SettingType.INTEGER: int,
+            SettingType.FLOAT: float,
+            SettingType.STRING: str,
+            SettingType.PASSWORD: str,
+            SettingType.BOOLEAN: bool,
+            SettingType.STRING_LIST: str,
+            SettingType.FILE_PATH: str,
+        }
+        return type_map.get(setting.setting_type)
+
+    def _spinbox_width(self, widget, max_value) -> int:
+        if max_value is None:
+            text = "0" * 5
+        else:
+            text = str(max_value)
+        metrics = widget.fontMetrics()
+        return metrics.horizontalAdvance(text) + 40
+
+    def _combobox_width(self, widget, options) -> int:
+        metrics = widget.fontMetrics()
+        if not options:
+            return self.COMBOBOX_MIN_WIDTH
+        longest = max(options, key=len)
+        return metrics.horizontalAdvance(longest) + 44
+
+    def _create_text_input(self, is_password: bool = False) -> QLineEdit:
+        widget = self._PreferredLineEdit(self.TEXT_PREFERRED_WIDTH, self.TEXT_MIN_WIDTH)
+        if is_password:
+            widget.setEchoMode(QLineEdit.Password)
+        widget.setMinimumWidth(self.TEXT_MIN_WIDTH)
+        widget.setMaximumWidth(self.TEXT_MAX_WIDTH)
+        widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        return widget
+
+    def _create_file_path_widget(self) -> QWidget:
+        container = QWidget()
+        container_layout = QHBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(self.FILE_BUTTON_SPACING)
+        line_edit = self._create_text_input()
+        browse_btn = QPushButton("...")
+        browse_btn.setFixedWidth(self.FILE_BUTTON_WIDTH)
+        container_layout.addWidget(line_edit, 1)
+        container_layout.addWidget(browse_btn, 0)
+
+        def _choose_file():
+            start_dir = line_edit.text() or ""
+            path, _ = QFileDialog.getOpenFileName(self, "Выбор файла", start_dir)
+            if path:
+                line_edit.setText(path)
+
+        browse_btn.clicked.connect(_choose_file)
+        container.setProperty("line_edit", line_edit)
+        container.setMinimumWidth(self.TEXT_MIN_WIDTH + self.FILE_BUTTON_WIDTH + self.FILE_BUTTON_SPACING)
+        container.setMaximumWidth(self.TEXT_MAX_WIDTH + self.FILE_BUTTON_WIDTH + self.FILE_BUTTON_SPACING)
+        container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        return container
+
+    def _create_info_label(self, text: str) -> QLabel:
+        info_label = QLabel("ℹ️")
+        info_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        info_label.setToolTip(text)
+        return info_label
 
 
 # ----------------------------
@@ -449,9 +801,9 @@ class ScriptTab(QWidget):
         self.plugin_stack.setCurrentIndex(self._op_key_to_index.get(op_key, 0))
         self.ctx.save_value("meta/operation", op_key)
         
-        # Обновляем виджет настроек при смене плагина
+        # При смене операции закрываем настройки и возвращаемся к основному виду
         if self.settings_btn.isChecked():
-            self._update_settings_widget()
+            self.settings_btn.setChecked(False)
 
     def _on_name_changed(self, text: str):
         self.ctx.save_value("meta/name", text)
@@ -569,7 +921,7 @@ class ScriptTab(QWidget):
             self.settings_widget = SettingsWidget(
                 self.ctx, 
                 plugin_settings_list, 
-                self.global_settings
+                self.global_settings,
             )
         else:
             self.settings_widget = SettingsWidget(self.ctx, [], self.global_settings)
