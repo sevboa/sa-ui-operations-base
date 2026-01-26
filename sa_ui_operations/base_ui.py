@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
     QToolButton, QPushButton, QComboBox, QLineEdit,
     QLabel, QStackedWidget, QPlainTextEdit, QFrame,
     QSizePolicy, QMainWindow, QDoubleSpinBox,
-    QSpinBox, QGroupBox, QFileDialog, QCheckBox
+    QSpinBox, QGroupBox, QFileDialog, QCheckBox,
+    QScrollArea
 )
 from .settings import SettingItem, SettingType, GroupSetting
 
@@ -753,8 +754,16 @@ class ScriptTab(QWidget):
         # --- Console at bottom (collapsible)
         self.console = CollapsibleConsole()
 
+        # Scrollable content (both axes) for plugin/settings area
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.main_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.main_scroll.setFrameShape(QFrame.NoFrame)
+        self.main_scroll.setWidget(self.main_stack)
+
         root.addLayout(top)
-        root.addWidget(self.main_stack, 1)
+        root.addWidget(self.main_scroll, 1)
         root.addWidget(self.console, 0)
 
         # Restore per-tab state
@@ -981,6 +990,7 @@ class MainWindow(QMainWindow):
         root.setSpacing(8)
 
         self.tabs = QTabWidget()
+        self.tabs.setMinimumSize(200, 300)
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self._close_tab)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
