@@ -20,7 +20,7 @@ source .venv/bin/activate
 ### Установка стабильной версии (рекомендуется):
 
 ```bash
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Установка последней версии из develop (для разработки):
@@ -35,7 +35,7 @@ pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/d
 python -c "from sa_ui_operations import __version__; print(f'Версия: {__version__}')"
 ```
 
-Должно вывести: `Версия: 1.2.0`
+Должно вывести: `Версия: 1.2.1`
 
 ## Решение проблем
 
@@ -56,12 +56,12 @@ source .venv/bin/activate
 
 **Решение 2:** Используйте полный путь к pip:
 ```bash
-.venv/bin/pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+.venv/bin/pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 **Решение 3:** Используйте `python -m pip`:
 ```bash
-python -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+python -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 **Решение 4:** Пересоздайте виртуальное окружение:
@@ -69,7 +69,7 @@ python -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/re
 rm -rf .venv
 python -m venv .venv
 source .venv/bin/activate
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 Подробнее см. [TROUBLESHOOTING.md](TROUBLESHOOTING.md)

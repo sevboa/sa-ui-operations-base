@@ -98,7 +98,7 @@ python setup.py bdist_wheel
 ### Установка из wheel
 
 ```bash
-pip install dist/sa_ui_operations_base-1.2.0-py3-none-any.whl
+pip install dist/sa_ui_operations_base-1.2.1-py3-none-any.whl
 ```
 
 ## Публикация в PyPI (опционально)
@@ -142,11 +142,11 @@ pip install sa-ui-operations-base
 Для обновления версии измените `version` в `setup.py` и `pyproject.toml`:
 
 ```python
-version="1.2.0"  # в setup.py
+version="1.2.1"  # в setup.py
 ```
 
 ```toml
-version = "1.2.0"  # в pyproject.toml
+version = "1.2.1"  # в pyproject.toml
 ```
 
 Также обновите `__version__` в `sa_ui_operations/__init__.py`.

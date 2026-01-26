@@ -2,7 +2,7 @@
 SA UI Operations Base - Универсальная библиотека для создания GUI приложений с плагинами
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 from .base_ui import (
     MainWindow,

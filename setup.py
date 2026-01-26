@@ -7,7 +7,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name="sa-ui-operations-base",
-    version="1.2.0",
+    version="1.2.1",
     author="Your Name",
     author_email="your.email@example.com",
     description="Универсальная библиотека для создания GUI приложений на PySide6 с системой плагинов",

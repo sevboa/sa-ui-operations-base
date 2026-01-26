@@ -15,7 +15,7 @@ source .venv/bin/activate
 # .venv\Scripts\activate
 
 # Теперь устанавливайте пакет
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ## Как это работает?
@@ -39,7 +39,7 @@ pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1
 
 **Пример:**
 ```bash
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### ⚠️ Используйте ветку develop (только для разработки)
@@ -72,8 +72,8 @@ source .venv/bin/activate  # Linux/macOS
 # или
 # .venv\Scripts\activate  # Windows
 
-# Версия 1.2.0
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+# Версия 1.2.1
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 **Плюсы:**
@@ -115,8 +115,8 @@ pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/m
 ### Рекомендуемый способ (по тегу):
 
 ```txt
-# Стабильная версия 1.2.0
-sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+# Стабильная версия 1.2.1
+sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Для разработки (из ветки):
@@ -132,18 +132,18 @@ sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/
 
 1. **Используйте теги версий:**
    ```txt
-   sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+   sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
    ```
 
 2. **Обновляйте версию явно:**
    ```txt
-   sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+   sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
    ```
 
 3. **Тестируйте новую версию перед обновлением:**
    ```bash
    # Установите новую версию в тестовом окружении
-   pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+   pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
    # Протестируйте
    # Если всё ок, обновите requirements.txt
    ```
@@ -158,7 +158,7 @@ sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/
 2. **После релиза переключитесь на тег:**
 
 ```bash
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ## Проверка установленной версии
@@ -174,7 +174,7 @@ print(f"Установленная версия: {__version__}")
 
 ```bash
 # Установить новую версию
-pip install --upgrade https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install --upgrade https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Если установлена из ветки:
@@ -202,7 +202,7 @@ pip install --upgrade --force-reinstall https://github.com/sevboa/sa-ui-operatio
 
 ## Итоговые рекомендации
 
-1. **Для продакшена:** Используйте только теги версий (`v1.2.0`)
+1. **Для продакшена:** Используйте только теги версий (`v1.2.1`)
 2. **Для разработки:** Можно использовать develop, но помните о нестабильности
 3. **Для командной работы:** Всегда используйте теги - так все получат одинаковый код
 4. **При обновлении:** Сначала тестируйте новую версию, затем обновляйте requirements.txt
@@ -213,7 +213,7 @@ pip install --upgrade --force-reinstall https://github.com/sevboa/sa-ui-operatio
 
 ```txt
 # requirements.txt
-sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Сценарий 2: Разработка плагина
@@ -223,12 +223,12 @@ sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/
 pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
 
 # После релиза переключиться на тег
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Сценарий 3: Отладка проблемы
 
 ```bash
 # Установить релизную версию для повторяемости
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```

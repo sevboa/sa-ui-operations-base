@@ -35,8 +35,8 @@ source .venv/bin/activate  # Linux/macOS
 ### Рекомендуемый способ: установка из ZIP по тегу версии
 
 ```bash
-# Установка стабильной версии 1.2.0 (без Git)
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+# Установка стабильной версии 1.2.1 (без Git)
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 **Почему теги?** Теги обеспечивают стабильность и воспроизводимость - все получат одинаковый код.
@@ -102,7 +102,7 @@ pip install sa-ui-operations-base
 
 ```txt
 # Рекомендуется: стабильная версия по тегу
-sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 
 # Или для разработки (не рекомендуется для production)
 # sa-ui-operations-base @ https://github.com/sevboa/sa-ui-operations-base/archive/refs/heads/develop.zip
@@ -665,7 +665,7 @@ pip install -e /path/to/sa-ui-operations-base
 Добавьте в `requirements.txt` вашего проекта:
 
 ```
-sa-ui-operations-base>=1.2.0
+sa-ui-operations-base>=1.2.1
 ```
 
 Затем установите:

@@ -10,7 +10,7 @@
 
 ```bash
 # Вместо просто pip используйте полный путь
-.venv/bin/pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+.venv/bin/pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Решение 2: Пересоздайте виртуальное окружение
@@ -30,7 +30,7 @@ which pip
 # Должно показать: /path/to/sa-ui-operations-base/.venv/bin/pip
 
 # Установите пакет
-pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Решение 3: Используйте python -m pip
@@ -40,7 +40,7 @@ pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1
 source .venv/bin/activate
 
 # Используйте python -m pip вместо просто pip
-python -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+python -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ### Решение 4: Проверьте активацию venv
@@ -82,9 +82,9 @@ pip show sa-ui-operations-base
 source .venv/bin/activate
 
 # Скачайте архив с нужной веткой/тегом
-curl -L -o sa-ui-operations-base.zip https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+curl -L -o sa-ui-operations-base.zip https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 unzip sa-ui-operations-base.zip
-cd sa-ui-operations-base-1.2.0
+cd sa-ui-operations-base-1.2.1
 
 # Установите в режиме разработки
 pip install -e .
@@ -98,7 +98,7 @@ pip install -e .
 # Используйте python3 явно
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+python3 -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 ## Если ничего не помогает
@@ -106,7 +106,7 @@ python3 -m pip install https://github.com/sevboa/sa-ui-operations-base/archive/r
 Используйте `--break-system-packages` (НЕ рекомендуется, только в крайнем случае):
 
 ```bash
-pip install --break-system-packages https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.0.zip
+pip install --break-system-packages https://github.com/sevboa/sa-ui-operations-base/archive/refs/tags/v1.2.1.zip
 ```
 
 **⚠️ Внимание:** Это установит пакет в системный Python, что может вызвать проблемы. Используйте только если действительно необходимо.
